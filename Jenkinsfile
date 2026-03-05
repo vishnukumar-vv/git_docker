@@ -1,10 +1,5 @@
 pipeline {
-    agent { label 'linuxgit' }
-
-    environment {
-        IMAGE_NAME = "my-app-image"
-        CONTAINER_NAME = "my-app-container"
-    }
+    agent any
 
     stages {
 
@@ -16,14 +11,14 @@ pipeline {
 
         stage('Build Docker Image') {
             steps {
-                sh 'docker build -t $IMAGE_NAME -f public/Dockerfile.python public/'
+                sh 'docker build -t my-app-image -f public/Dockerfile.python public/'
             }
         }
 
         stage('Run Docker Container') {
             steps {
-                sh 'docker rm -f $CONTAINER_NAME || true'
-                sh 'docker run -d -p 5000:5000 --name $CONTAINER_NAME $IMAGE_NAME'
+                sh 'docker rm -f my-app-container || true'
+                sh 'docker run -d -p 5000:5000 --name my-app-container my-app-image'
             }
         }
 
