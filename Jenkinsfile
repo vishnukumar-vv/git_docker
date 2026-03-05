@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     stages {
-        // ADD THIS STAGE TO FIX THE ERROR
+        // THIS STAGE FIXES THE "NOT IN A GIT DIRECTORY" ERROR
         stage('Checkout Code') {
             steps {
                 checkout scm
@@ -11,7 +11,7 @@ pipeline {
 
         stage('Build Docker Image') {
             steps {
-                // Now that the code is checked out, this command will find public/Dockerfile.python
+                // Now that the code is present, this command will find your Dockerfile
                 sh 'docker build -t my-app-image -f public/Dockerfile.python public/'
             }
         }
