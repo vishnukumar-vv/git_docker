@@ -3,12 +3,6 @@ pipeline {
 
     stages {
 
-        stage('Clean Workspace') {
-            steps {
-                cleanWs()
-            }
-        }
-
         stage('Build Docker Image') {
             steps {
                 sh 'docker build -t my-app-image -f public/Dockerfile.python public/'
@@ -25,12 +19,6 @@ pipeline {
     }
 
     post {
-        success {
-            echo "Pipeline Success"
-        }
-        failure {
-            echo "Pipeline Failed"
-        }
         always {
             echo "Pipeline Finished"
         }
