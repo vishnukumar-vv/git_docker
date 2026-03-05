@@ -1,0 +1,12 @@
+FROM nginx:alpine
+
+# remove default nginx website
+RUN rm -rf /usr/share/nginx/html/*
+
+# copy current directory files to nginx html
+COPY . /usr/share/nginx/html
+
+EXPOSE 80
+
+CMD ["nginx", "-g", "daemon off;"]
+
