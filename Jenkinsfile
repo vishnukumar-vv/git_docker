@@ -16,5 +16,15 @@ pipeline {
             }
         }
 
+        stage('Show Container Details') {
+            steps {
+                sh 'echo "Running images"'
+                sh ' docker images'
+
+                sh 'echo "Running Containers:"'
+                sh 'docker ps'
+            }
+        }
+
     }
 }
