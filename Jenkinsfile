@@ -2,9 +2,16 @@ pipeline {
     agent any
 
     stages {
+        // ADD THIS STAGE TO FIX THE ERROR
+        stage('Checkout Code') {
+            steps {
+                checkout scm
+            }
+        }
 
         stage('Build Docker Image') {
             steps {
+                // Now that the code is checked out, this command will find public/Dockerfile.python
                 sh 'docker build -t my-app-image -f public/Dockerfile.python public/'
             }
         }
@@ -15,7 +22,6 @@ pipeline {
                 sh 'docker run -d -p 5000:5000 --name my-app-container my-app-image'
             }
         }
-
     }
 
     post {
