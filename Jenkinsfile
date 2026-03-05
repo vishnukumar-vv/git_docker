@@ -12,7 +12,7 @@ stages {
 
     stage('Clone Repository') {
         steps {
-            echo "Cloning repository from GitHub"
+            echo "Cloning repository"
             git url: env.REPO_URL
         }
     }
@@ -27,11 +27,7 @@ stages {
     stage('Run Docker Container') {
         steps {
             echo "Running Docker container"
-
-            // Remove existing container if it exists
             sh 'docker rm -f $CONTAINER_NAME || true'
-
-            // Run new container
             sh 'docker run -d --name $CONTAINER_NAME -p 5000:5000 $IMAGE_NAME'
         }
     }
@@ -57,4 +53,3 @@ post {
 ```
 
 }
-
