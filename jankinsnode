@@ -9,7 +9,7 @@ pipeline {
         stage('Build Node Docker Image') {
             steps {
                 // Using a local tag 'node-app' for the build phase
-                sh 'docker build -t node-app -f Dockerfile.node .'
+                sh 'docker build -t node-app -f public/Dockerfile.node public/'
             }
         }
 
