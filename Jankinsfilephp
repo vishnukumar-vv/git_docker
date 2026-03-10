@@ -1,0 +1,89 @@
+pipeline {
+    agent { label 'linuxgit' }
+    
+    environment {
+        DOCKER_IMAGE = "8105577060/php-app:${env.BUILD_NUMBER}"
+        CONTAINER_NAME = "php-container"
+    }
+
+    stages {
+        stage('Build PHP Docker Image') {
+            steps {
+                // Use double quotes to ensure variables/paths are handled correctly by the shell
+                sh "docker build -t php-app -f public/Dockerfile.php public/"
+            }
+        }
+
+        stage('Tag Docker Image') {
+            steps {
+                // Changed to double quotes so $DOCKER_IMAGE is resolved
+                sh "docker tag php-app:latest ${DOCKER_IMAGE}"
+            }
+        }
+
+        stage('Stop Old Container') {
+            steps {
+                sh "docker rm -f ${CONTAINER_NAME} || true"
+            }
+        }
+
+        stage('Run PHP Container') {
+            steps {
+                sh "docker run -d -p 8082:80 --name ${CONTAINER_NAME} php-app"
+            }
+        }
+
+        stage('Show Docker Status') {
+            steps {
+                sh 'docker images'
+                sh 'docker ps'
+            }
+        }
+
+        stage('Push Image to DockerHub') {
+            steps {
+                script {
+                    withCredentials([usernamePassword(
+                        credentialsId: 'dockerhub-creds',
+                        usernameVariable: 'DOCKER_USER',
+                        passwordVariable: 'DOCKER_PASS'
+                    )]) {
+                        sh "echo ${DOCKER_PASS} | docker login -u ${DOCKER_USER} --password-stdin"
+                        sh "docker push ${DOCKER_IMAGE}"
+                    }
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            emailext(
+                subject: "SUCCESS: ${env.JOB_NAME} Build #${env.BUILD_NUMBER}",
+                body: """
+                Build Successful!
+                Job Name: ${env.JOB_NAME}
+                Build Number: ${env.BUILD_NUMBER}
+                Docker Image: ${DOCKER_IMAGE}
+                Build URL: ${env.BUILD_URL}
+                """,
+                to: "vishnu_kumar2@zohomail.in"
+            )
+        }
+        failure {
+            emailext(
+                subject: "FAILED: ${env.JOB_NAME} Build #${env.BUILD_NUMBER}",
+                body: """
+                Build Failed!
+                Job Name: ${env.JOB_NAME}
+                Build Number: ${env.BUILD_NUMBER}
+                Check Jenkins logs: ${env.BUILD_URL}
+                """,
+                to: "vishnu_kumar2@zohomail.in"
+            )
+        }
+        always {
+            cleanWs()
+        }
+    }
+}
