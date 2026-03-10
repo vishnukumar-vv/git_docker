@@ -1,0 +1,78 @@
+pipeline {
+    agent { label 'linuxgit' }
+    
+    environment {
+        DOCKER_IMAGE = "8105577060/nginx-app:${env.BUILD_NUMBER}"
+        CONTAINER_NAME = "nginx-container"
+    }
+
+    stages {
+        stage('Build Nginx Docker Image') {
+            steps {
+                sh 'docker build -t nginx-app -f Dockerfile.nginx .'
+            }
+        }
+
+        stage('Tag Docker Image') {
+            steps {
+                sh "docker tag nginx-app:latest ${env.DOCKER_IMAGE}"
+            }
+        }
+
+        stage('Run Nginx Container') {
+            steps {
+                // Use double quotes to allow Groovy variable interpolation
+                sh "docker rm -f ${env.CONTAINER_NAME} || true"
+                sh "docker run -d -p 8080:80 --name ${env.CONTAINER_NAME} nginx-app"
+            }
+        }
+
+        stage('Show Container Details') {
+            steps {
+                sh 'echo "Docker Images:"'
+                sh 'docker images'
+                sh 'echo "Running Containers:"'
+                sh 'docker ps'
+            }
+        }
+
+        stage('Push Image to DockerHub') {
+            steps {
+                withCredentials([usernamePassword(
+                    credentialsId: 'dockerhub-creds', 
+                    usernameVariable: 'DOCKER_USER', 
+                    passwordVariable: 'DOCKER_PASS'
+                )]) {
+                    // It is safer to use single quotes for the shell command to prevent 
+                    // the password from being leaked in the Jenkins UI logs
+                    sh 'echo "${DOCKER_PASS}" | docker login -u "${DOCKER_USER}" --password-stdin'
+                    sh "docker push ${env.DOCKER_IMAGE}"
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            emailext(
+                subject: "SUCCESS: ${env.JOB_NAME} Build #${env.BUILD_NUMBER}",
+                body: """Build Successful!
+Job Name: ${env.JOB_NAME}
+Build Number: ${env.BUILD_NUMBER}
+Docker Image: ${env.DOCKER_IMAGE}
+Build URL: ${env.BUILD_URL}""",
+                to: "vishnu_kumar2@zohomail.in"
+            )
+        }
+        failure {
+            emailext(
+                subject: "FAILED: ${env.JOB_NAME} Build #${env.BUILD_NUMBER}",
+                body: """Build Failed!
+Job Name: ${env.JOB_NAME}
+Build Number: ${env.BUILD_NUMBER}
+Check Jenkins logs: ${env.BUILD_URL}""",
+                to: "vishnu_kumar2@zohomail.in"
+            )
+        }
+    }
+}
