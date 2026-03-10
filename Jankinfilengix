@@ -9,7 +9,7 @@ pipeline {
     stages {
         stage('Build Nginx Docker Image') {
             steps {
-                sh 'docker build -t nginx-app -f Dockerfile.nginx .'
+                sh 'docker build -t nginx-app -f public/Dockerfile.nginx public/'
             }
         }
 
