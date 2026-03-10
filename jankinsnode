@@ -1,0 +1,80 @@
+pipeline {
+    agent { label 'linuxgit' }
+    environment {
+        DOCKER_IMAGE = "8105577060/node-app:${env.BUILD_NUMBER}"
+        CONTAINER_NAME = "node-container"
+    }
+
+    stages {
+        stage('Build Node Docker Image') {
+            steps {
+                // Using a local tag 'node-app' for the build phase
+                sh 'docker build -t node-app -f Dockerfile.node .'
+            }
+        }
+
+        stage('Tag Docker Image') {
+            steps {
+                // Ensure variables are inside double quotes for interpolation
+                sh "docker tag node-app:latest ${DOCKER_IMAGE}"
+            }
+        }
+
+        stage('Stop Old Container') {
+            steps {
+                sh "docker rm -f ${CONTAINER_NAME} || true"
+            }
+        }
+
+        stage('Run Node Container') {
+            steps {
+                // IMPORTANT: Changed 'node-app' to '${DOCKER_IMAGE}' 
+                // to ensure you run the specific version you just built/tagged.
+                sh "docker run -d -p 3000:3000 --name ${CONTAINER_NAME} ${DOCKER_IMAGE}"
+            }
+        }
+
+        stage('Show Docker Status') {
+            steps {
+                sh 'docker images'
+                sh 'docker ps'
+            }
+        }
+
+        stage('Push Image to DockerHub') {
+            steps {
+                withCredentials([usernamePassword(
+                    credentialsId: 'dockerhub-creds',
+                    usernameVariable: 'DOCKER_USER',
+                    passwordVariable: 'DOCKER_PASS'
+                )]) {
+                    // Standard secure login and push
+                    sh "echo ${DOCKER_PASS} | docker login -u ${DOCKER_USER} --password-stdin"
+                    sh "docker push ${DOCKER_IMAGE}"
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            emailext (
+                subject: "SUCCESS: ${env.JOB_NAME} Build #${env.BUILD_NUMBER}",
+                body: """Build Successful!
+Job Name: ${env.JOB_NAME}
+Build Number: ${env.BUILD_NUMBER}
+Docker Image: ${DOCKER_IMAGE}
+Build URL: ${env.BUILD_URL}""",
+                to: "vishnu_kumar2@zohomail.in"
+            )
+        }
+        failure {
+            emailext (
+                subject: "FAILED: ${env.JOB_NAME} Build #${env.BUILD_NUMBER}",
+                body: """Build Failed!
+Check Jenkins logs: ${env.BUILD_URL}""",
+                to: "vishnu_kumar2@zohomail.in"
+            )
+        }
+    }
+}
