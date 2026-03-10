@@ -1,0 +1,88 @@
+pipeline {
+    agent { label 'linuxgit' }
+    
+    environment {
+        // Use double quotes for environment variables to ensure proper interpolation
+        DOCKER_IMAGE = "8105577060/go-app:${env.BUILD_NUMBER}"
+        CONTAINER_NAME = "go-container"
+    }
+
+    stages {
+        stage('Build Go Docker Image') {
+            steps {
+                // Building with a specific tag immediately saves a 'tagging' step later
+                sh "docker build -t go-app -f public/Dockerfile.go public/"
+            }
+        }
+
+        stage('Tag Docker Image') {
+            steps {
+                // Must use double quotes "" to allow Jenkins to read $DOCKER_IMAGE
+                sh "docker tag go-app:latest ${DOCKER_IMAGE}"
+            }
+        }
+
+        stage('Stop Old Container') {
+            steps {
+                // Added || true to prevent the build from failing if no container exists
+                sh "docker rm -f ${CONTAINER_NAME} || true"
+            }
+        }
+
+        stage('Run Go Container') {
+            steps {
+                sh "docker run -d -p 8080:8080 --name ${CONTAINER_NAME} go-app"
+            }
+        }
+
+        stage('Show Docker Status') {
+            steps {
+                sh 'docker images'
+                sh 'docker ps'
+            }
+        }
+
+        stage('Push Image to DockerHub') {
+            steps {
+                script {
+                    withCredentials([usernamePassword(
+                        credentialsId: 'dockerhub-creds',
+                        usernameVariable: 'DOCKER_USER',
+                        passwordVariable: 'DOCKER_PASS'
+                    )]) {
+                        sh "echo ${DOCKER_PASS} | docker login -u ${DOCKER_USER} --password-stdin"
+                        sh "docker push ${DOCKER_IMAGE}"
+                    }
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            emailext(
+                subject: "SUCCESS: ${env.JOB_NAME} Build #${env.BUILD_NUMBER}",
+                body: """
+Build Successful!
+Job Name: ${env.JOB_NAME}
+Build Number: ${env.BUILD_NUMBER}
+Docker Image: ${DOCKER_IMAGE}
+Build URL: ${env.BUILD_URL}
+""",
+                to: "vishnu_kumar2@zohomail.in"
+            )
+        }
+        failure {
+            emailext(
+                subject: "FAILED: ${env.JOB_NAME} Build #${env.BUILD_NUMBER}",
+                body: """
+Build Failed!
+Job Name: ${env.JOB_NAME}
+Build Number: ${env.BUILD_NUMBER}
+Check Jenkins logs: ${env.BUILD_URL}
+""",
+                to: "vishnu_kumar2@zohomail.in"
+            )
+        }
+    }
+}
